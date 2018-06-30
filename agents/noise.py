@@ -8,10 +8,10 @@ class OUNoise:
         """Initialize parameters and noise process.
         Params
         ======
-            size:
-            mu: the mean, which controls exploration as learning progresses
-            theta: the speed of the mean reversion
-            sigma: the volatility
+            size (int): corresponds to the number of actions per step
+            mu (float): the mean, which controls exploration as learning progresses
+            theta (float): the speed of the mean reversion
+            sigma (float): the volatility
         """
         self.mu = mu * np.ones(size)
         self.theta = theta

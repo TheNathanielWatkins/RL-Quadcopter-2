@@ -10,25 +10,25 @@ from keras.models import Sequential
 from keras.layers import Dense
 from keras.optimizers import Adam
 
-# from task import Task
 
 class DDPG():
     """Reinforcement Learning agent that learns using DDPG."""
     def __init__(self, task,
-        mu=0, theta=0.15, sigma=0.2,
-        buffer_size=150000, batch_size=128,
-        gamma=.99, tau=0.01, grid_search=False):
+        mu=0, theta=0.15, sigma=0.22,
+        buffer_size=1000000, batch_size=128,
+        gamma=.99, tau=0.02, learning_rate=0.001):
         """
         Params
         ======
             task: Task (environment) that defines the goal and provides feedback to the agent
-            mu: Mu in the OU noise algorithm
-            theta: Theta in the OU noise algorithm
-            sigma: Sigma in the OU noise algorithm
-            buffer_size: Maximum size of the buffer in the replay memory
-            batch_size: Size of each training batch in the replay memory
-            gamma: Discount factor
-            tau: Soft update of target parameters
+            mu (float): Mu in the OU noise algorithm
+            theta (float): Theta in the OU noise algorithm
+            sigma (float): Sigma in the OU noise algorithm
+            buffer_size (int): Maximum size of the buffer in the replay memory
+            batch_size (int): Size of each training batch in the replay memory
+            gamma (float): Discount factor
+            tau (float): Soft update of target parameters
+            learning_rate (float): the learning rate for the optimizers in the actor & critic models
         """
         self.task = task
         self.state_size = task.state_size
@@ -36,13 +36,17 @@ class DDPG():
         self.action_low = task.action_low
         self.action_high = task.action_high
 
+        self.learning_rate = learning_rate
+
         # Actor (Policy) Model
-        self.actor_local = Actor(self.state_size, self.action_size, self.action_low, self.action_high)
-        self.actor_target = Actor(self.state_size, self.action_size, self.action_low, self.action_high)
+        # self.actor_lr = learning_rate
+        self.actor_local = Actor(self.state_size, self.action_size, self.action_low, self.action_high, self.learning_rate)
+        self.actor_target = Actor(self.state_size, self.action_size, self.action_low, self.action_high, self.learning_rate)
 
         # Critic (Value) Model
-        self.critic_local = Critic(self.state_size, self.action_size)
-        self.critic_target = Critic(self.state_size, self.action_size)
+        # self.critic_lr = learning_rate
+        self.critic_local = Critic(self.state_size, self.action_size, self.learning_rate)
+        self.critic_target = Critic(self.state_size, self.action_size, self.learning_rate)
 
         # Initialize target model parameters with local model parameters
         self.critic_target.model.set_weights(self.critic_local.model.get_weights())
@@ -65,14 +69,15 @@ class DDPG():
 
         # Score tracker
         self.best_score = -np.inf
-        self.average_score = 0.
-        self.total_score = deque(maxlen=500)
-        ## Set as a deque because I wanted to know if the agent was wandering away from optimal performance after a lot of episodes
+        self.average_score = 0.  # This value is really the recent average, based on the last 10 episodes
+        self.total_score = []
+
+        self.params = {"Mu":self.exploration_mu, "Theta":self.exploration_theta,
+            "Sigma":self.exploration_sigma, "Gamma":self.gamma,
+            "Tau":self.tau,"Learning Rate":self.learning_rate}
 
         # Episode variables
         self.reset_episode()
-
-        self.params = {"Mu":self.exploration_mu, "Theta":self.exploration_theta, "Sigma":self.exploration_sigma, "Gamma":self.gamma, "Tau":self.tau}
 
     def reset_episode(self):
         self.noise.reset()
@@ -85,8 +90,11 @@ class DDPG():
          # Save experience / reward
         self.memory.add(self.last_state, action, reward, next_state, done)
         self.score += reward
-        if self.score > self.best_score:
-            self.best_score = self.score
+        if done:
+            self.total_score.append(self.score)
+            self.average_score = np.mean(self.total_score[-10:])
+            if self.score > self.best_score:
+                self.best_score = self.score
 
         # Learn, if enough samples are available in memory
         if len(self.memory) > self.batch_size:
@@ -99,9 +107,7 @@ class DDPG():
     def act(self, state):
         """Returns actions for given state(s) as per current policy."""
         state = np.reshape(state, [-1, self.state_size])
-        # print(state)
         action = self.actor_local.model.predict(state)[0]
-        # print(action)
         return list(action + self.noise.sample())  # add some noise for exploration
 
     def learn(self, experiences):
@@ -114,7 +120,6 @@ class DDPG():
         next_states = np.vstack([e.next_state for e in experiences if e is not None])
 
         # Get predicted next-state actions and Q values from target models
-        # Q_targets_next = critic_target(next_state, actor_target(next_state))  # Why was this line here and commented out?!
         actions_next = self.actor_target.model.predict_on_batch(next_states)
         Q_targets_next = self.critic_target.model.predict_on_batch([next_states, actions_next])
 
@@ -179,9 +184,10 @@ class DeepQ():
         # Score tracker and learning parameters
         self.best_score = -np.inf
         self.average_score = 0.
-        self.total_score = deque(maxlen=500)
+        self.total_score = []
 
         self.model = self._build_model()
+        self.target_model = self._build_model()
 
         self.reset_episode()
 
@@ -195,10 +201,10 @@ class DeepQ():
         # Neural Net for Deep-Q learning Model
         model = Sequential()
         model.add(Dense(24, input_dim=self.state_size, activation='relu'))
+        model.add(Dense(48, activation='relu'))
         model.add(Dense(24, activation='relu'))
-        model.add(Dense(self.action_size, activation='linear'))
-        model.compile(loss='mse',
-                      optimizer=Adam(lr=self.learning_rate))
+        model.add(Dense(self.action_size))
+        model.compile(loss='mse', optimizer=Adam(lr=self.learning_rate))
         return model
 
     def remember(self, state, action, reward, next_state, done):
@@ -207,6 +213,8 @@ class DeepQ():
     def act(self, state):
         """Returns actions for given state(s) as per current policy."""
         ## Adds exploration
+        self.epsilon *= self.epsilon_decay
+        self.epsilon = max(self.epsilon_min, self.epsilon)
         if np.random.rand() <= self.epsilon:
             action = [random.uniform(self.action_low, self.action_high) for i in range(self.action_size)]
             return action
@@ -219,8 +227,11 @@ class DeepQ():
          # Save experience / reward
         self.remember(self.last_state, action, reward, next_state, done)
         self.score += reward
-        if self.score > self.best_score:
-            self.best_score = self.score
+        if done:
+            self.total_score.append(self.score)
+            self.average_score = np.mean(self.total_score[-10:])
+            if self.score > self.best_score:
+                self.best_score = self.score
 
         # Roll over last state and action
         self.last_state = next_state
@@ -232,13 +243,19 @@ class DeepQ():
     def replay(self, batch_size):
         minibatch = random.sample(self.memory, batch_size)
         for state, action, reward, next_state, done in minibatch:
-            target = reward
             next_state = np.reshape(next_state, [-1, self.state_size])
             state = np.reshape(state, [-1, self.state_size])
+            target = self.target_model.predict(state)
+            if done:
+                target[0][action] = reward
             if not done:
-                target = reward + self.gamma * np.amax(self.model.predict(next_state)[0])
+                target[0][action] = reward + self.gamma * np.amax(self.target_model.predict(next_state)[0])
             target_f = self.model.predict(state)
-            target_f[0] = target
             self.model.fit(state, target_f, epochs=1, verbose=0)
-        if self.epsilon > self.epsilon_min:
-            self.epsilon *= self.epsilon_decay
+
+    def target_train(self):
+        weights = self.model.get_weights()
+        target_weights = self.target_model.get_weights()
+        for i in range(len(target_weights)):
+            target_weights[i] = weights[i] * self.tau + target_weights[i] * (1 - self.tau)
+        self.target_model.set_weights(target_weights)

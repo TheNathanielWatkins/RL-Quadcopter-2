@@ -8,8 +8,8 @@ class ReplayBuffer:
         """Initialize a ReplayBuffer object.
         Params
         ======
-            buffer_size: maximum size of buffer
-            batch_size: size of each training batch
+            buffer_size (int): maximum size of buffer
+            batch_size (int): size of each training batch
         """
         self.memory = deque(maxlen=buffer_size)  # internal memory (deque)
         self.batch_size = batch_size

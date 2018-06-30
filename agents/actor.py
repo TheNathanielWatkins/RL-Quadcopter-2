@@ -1,10 +1,10 @@
-from keras import layers, models, optimizers
+from keras import layers, models, optimizers, initializers
 from keras import backend as K
 
 class Actor:
     """Actor (Policy) Model."""
 
-    def __init__(self, state_size, action_size, action_low, action_high):
+    def __init__(self, state_size, action_size, action_low, action_high, learning_rate=0.001):
         """Initialize parameters and build model.
 
         Params
@@ -13,6 +13,7 @@ class Actor:
             action_size (int): Dimension of each action
             action_low (array): Min value of each action dimension
             action_high (array): Max value of each action dimension
+            learning_rate (float): Learning rate for optimizer
         """
         self.state_size = state_size
         self.action_size = action_size
@@ -21,6 +22,7 @@ class Actor:
         self.action_range = self.action_high - self.action_low
 
         # Initialize any other variables here
+        self.learning_rate = learning_rate
 
         self.build_model()
 
@@ -31,16 +33,17 @@ class Actor:
 
         # Add hidden layers
         net = layers.Dense(units=32, activation='relu')(states)
-        net = layers.Dropout(0.1)(net) ## Added
-        net = layers.BatchNormalization()(net) ## Added
+        # net = layers.Dropout(0.1)(net) ## Added
+        # net = layers.BatchNormalization()(net) ## Added
         net = layers.Dense(units=64, activation='relu')(net)
-        net = layers.Dropout(0.2)(net) ## Added
+        # net = layers.Dropout(0.2)(net) ## Added
         net = layers.Dense(units=32, activation='relu')(net)
 
         ## TODONE: Try different layer sizes, activations, add batch normalization, regularizers, etc.
 
         # Add final output layer with sigmoid activation
         raw_actions = layers.Dense(units=self.action_size, activation='sigmoid',
+            kernel_initializer = initializers.RandomUniform(minval=-0.003, maxval=0.003),
             name='raw_actions')(net)
 
         # Scale [0, 1] output for each action dimension to proper range
@@ -54,10 +57,10 @@ class Actor:
         action_gradients = layers.Input(shape=(self.action_size,))
         loss = K.mean(-action_gradients * actions)
 
-        # Incorporate any additional losses here (e.g. from regularizers)
+        # TODO: Incorporate any additional losses here (e.g. from regularizers)
 
         # Define optimizer and training function
-        optimizer = optimizers.Adam()
+        optimizer = optimizers.Adam(lr=self.learning_rate)
         updates_op = optimizer.get_updates(params=self.model.trainable_weights, loss=loss)
         self.train_fn = K.function(
             inputs=[self.model.input, action_gradients, K.learning_phase()],
