@@ -14,9 +14,10 @@ from keras.optimizers import Adam
 class DDPG():
     """Reinforcement Learning agent that learns using DDPG."""
     def __init__(self, task,
-        mu=0, theta=0.15, sigma=0.22,
-        buffer_size=1000000, batch_size=128,
-        gamma=.99, tau=0.02, learning_rate=0.001):
+        mu=0.02, theta=0.16, sigma=0.21,
+        buffer_size=1000000, batch_size=100,
+        gamma=.98, tau=0.02,
+        learning_rate=0.0041, dropout_rate=0.2):
         """
         Params
         ======
@@ -29,6 +30,7 @@ class DDPG():
             gamma (float): Discount factor
             tau (float): Soft update of target parameters
             learning_rate (float): the learning rate for the optimizers in the actor & critic models
+            dropout_rate (float): the rate for the dropout layer in the actor & critic models
         """
         self.task = task
         self.state_size = task.state_size
@@ -37,16 +39,21 @@ class DDPG():
         self.action_high = task.action_high
 
         self.learning_rate = learning_rate
+        self.dropout_rate = dropout_rate
 
         # Actor (Policy) Model
-        # self.actor_lr = learning_rate
-        self.actor_local = Actor(self.state_size, self.action_size, self.action_low, self.action_high, self.learning_rate)
-        self.actor_target = Actor(self.state_size, self.action_size, self.action_low, self.action_high, self.learning_rate)
+        self.actor_lr = learning_rate
+        self.actor_local = Actor(self.state_size, self.action_size,
+            self.action_low, self.action_high, self.actor_lr, self.dropout_rate)
+        self.actor_target = Actor(self.state_size, self.action_size,
+            self.action_low, self.action_high, self.actor_lr, self.dropout_rate)
 
         # Critic (Value) Model
-        # self.critic_lr = learning_rate
-        self.critic_local = Critic(self.state_size, self.action_size, self.learning_rate)
-        self.critic_target = Critic(self.state_size, self.action_size, self.learning_rate)
+        self.critic_lr = learning_rate * 10
+        self.critic_local = Critic(self.state_size, self.action_size,
+            self.critic_lr, self.dropout_rate)
+        self.critic_target = Critic(self.state_size, self.action_size,
+            self.critic_lr, self.dropout_rate)
 
         # Initialize target model parameters with local model parameters
         self.critic_target.model.set_weights(self.critic_local.model.get_weights())
@@ -74,7 +81,8 @@ class DDPG():
 
         self.params = {"Mu":self.exploration_mu, "Theta":self.exploration_theta,
             "Sigma":self.exploration_sigma, "Gamma":self.gamma,
-            "Tau":self.tau,"Learning Rate":self.learning_rate}
+            "Tau":self.tau,"Learning Rate":self.learning_rate,
+            "Dropout Rate":self.dropout_rate}
 
         # Episode variables
         self.reset_episode()

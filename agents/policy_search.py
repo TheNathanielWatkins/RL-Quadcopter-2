@@ -18,8 +18,8 @@ class PolicySearch_Agent():
         # Score tracker and learning parameters
         self.best_w = None
         self.best_score = -np.inf
-        self.score = 0
-        self.average_score = 0
+        self.score = 0.
+        self.average_score = 0.
         self.total_score = []
         self.noise_scale = 0.1
         self.params = "noise_scale: {}".format(self.noise_scale)
@@ -28,18 +28,18 @@ class PolicySearch_Agent():
         self.reset_episode()
 
     def reset_episode(self):
-        self.total_reward = 0.0
-        self.count = 0
+        self.score = 0.
         state = self.task.reset()
         return state
 
     def step(self, action, reward, next_state, done):
         # Save experience / reward
-        self.total_reward += reward
-        # self.count += 1
+        self.score += reward
 
         # Learn, if at end of episode
         if done:
+            self.total_score.append(self.score)
+            self.average_score = np.mean(self.total_score[-10:])
             self.learn()
 
     def act(self, state):
@@ -49,8 +49,6 @@ class PolicySearch_Agent():
 
     def learn(self):
         # Learn by random policy search, using a reward-based score
-        self.score = self.total_reward
-        # self.score = self.total_reward / float(self.count) if self.count else 0.0
         if self.score > self.best_score:
             self.best_score = self.score
             self.best_w = self.w

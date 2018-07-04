@@ -5,6 +5,9 @@ Since this project requires several skills that were only briefly mentioned and 
 ## So here they are in no particular order:
 - The reward function seems to be the critical factor holding back the agent from learning properly; *do this first*.
 - The starter code doesn't have any way to recognize if the target position was reached. (**Big Eureka moment right here**)
+- Stopping conditions are key to this project:
+ - Stopping the episode when the agent reaches the target.
+ - Stopping training when it reliably succeeds, and before it forgets how to succeed.
 - The physics_sim doesn't have a floor, if you set `init_pos` too low and if the agent doesn't apply thrust right away, it will just fall below 0 and end the episode.
 - Without specifying clear and large rewards for performing well, the agent might just decide it's better to crash early and end the episode sooner.
 - Euler angles are in radians and here's what they mean:
@@ -30,3 +33,5 @@ Since this project requires several skills that were only briefly mentioned and 
 - Adding dropout layers doesn't seem to improve the learning (nor does it seem to hinder it), but it does seem to slightly speed up the processing.
 - Don't use the rewards variable in the learn function to calculate scores, as those values will be out of context from the current state of the episode.
 - If you want to run training for more than a few hundred episodes, you should increase the agent's `buffer_size` or else it may wander away from the optimal policy.
+- If you're getting `nan` values for the simulation and/or errors from the sim, your activation functions might be outputting actions outside the 0-900 acceptable range. Some activations scale the output differently from others. Either change your activation function back or scale the output from your model to account for this.
+- A simpler reward function is better.

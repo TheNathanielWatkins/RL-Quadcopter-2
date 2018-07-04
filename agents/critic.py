@@ -4,7 +4,8 @@ from keras import backend as K
 class Critic:
     """Critic (Value) Model."""
 
-    def __init__(self, state_size, action_size, learning_rate=0.001):
+    def __init__(self, state_size, action_size,
+                learning_rate=0.001, dropout_rate=0.2):
         """Initialize parameters and build model.
 
         Params
@@ -18,6 +19,7 @@ class Critic:
 
         # Initialize any other variables here
         self.learning_rate = learning_rate
+        self.dropout_rate = dropout_rate
 
         self.build_model()
 
@@ -30,7 +32,7 @@ class Critic:
         # Add hidden layer(s) for state pathway
         net_states = layers.Dense(units=32,
             kernel_regularizer = regularizers.l2(0.01), activation='relu')(states)
-        # net_states = layers.Dropout(0.1)(net_states)  ## Added
+        net_states = layers.Dropout(self.dropout_rate)(net_states)  ## Added
         net_states = layers.BatchNormalization()(net_states)  ## Added
         net_states = layers.Dense(units=64,
             kernel_regularizer = regularizers.l2(0.01), activation='relu')(net_states)
@@ -38,7 +40,7 @@ class Critic:
         # Add hidden layer(s) for action pathway
         net_actions = layers.Dense(units=32,
             kernel_regularizer = regularizers.l2(0.01), activation='relu')(actions)
-        # net_actions = layers.Dropout(0.1)(net_actions)  ## Added
+        net_actions = layers.Dropout(self.dropout_rate)(net_actions)  ## Added
         net_actions = layers.BatchNormalization()(net_actions)  ## Added
         net_actions = layers.Dense(units=64,
             kernel_regularizer = regularizers.l2(0.01), activation='relu')(net_actions)
@@ -48,9 +50,9 @@ class Critic:
         # Combine state and action pathways
         net = layers.Add()([net_states, net_actions])
         net = layers.Activation('relu')(net)
-        # net = layers.Dense(units=32, activation='relu')(net)  ## Added
-        # net = layers.Dropout(0.1)(net)  ## Added
-        # net = layers.BatchNormalization()(net)  ## Added
+        net = layers.Dense(units=32, activation='relu')(net)  ## Added
+        net = layers.Dropout(self.dropout_rate)(net)  ## Added
+        net = layers.BatchNormalization()(net)  ## Added
 
         # # TODONE: Add more layers to the combined network if needed
 

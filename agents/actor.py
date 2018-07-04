@@ -4,7 +4,8 @@ from keras import backend as K
 class Actor:
     """Actor (Policy) Model."""
 
-    def __init__(self, state_size, action_size, action_low, action_high, learning_rate=0.001):
+    def __init__(self, state_size, action_size, action_low, action_high,
+                learning_rate=0.001, dropout_rate=0.2):
         """Initialize parameters and build model.
 
         Params
@@ -23,6 +24,7 @@ class Actor:
 
         # Initialize any other variables here
         self.learning_rate = learning_rate
+        self.dropout_rate = dropout_rate
 
         self.build_model()
 
@@ -33,10 +35,10 @@ class Actor:
 
         # Add hidden layers
         net = layers.Dense(units=32, activation='relu')(states)
-        # net = layers.Dropout(0.1)(net) ## Added
-        # net = layers.BatchNormalization()(net) ## Added
+        net = layers.Dropout(self.dropout_rate)(net) ## Added
+        net = layers.BatchNormalization()(net) ## Added
         net = layers.Dense(units=64, activation='relu')(net)
-        # net = layers.Dropout(0.2)(net) ## Added
+        net = layers.Dropout(self.dropout_rate)(net) ## Added
         net = layers.Dense(units=32, activation='relu')(net)
 
         ## TODONE: Try different layer sizes, activations, add batch normalization, regularizers, etc.
@@ -57,7 +59,8 @@ class Actor:
         action_gradients = layers.Input(shape=(self.action_size,))
         loss = K.mean(-action_gradients * actions)
 
-        # TODO: Incorporate any additional losses here (e.g. from regularizers)
+        # TODONE: Incorporate any additional losses here (e.g. from regularizers)
+        # I chose not to
 
         # Define optimizer and training function
         optimizer = optimizers.Adam(lr=self.learning_rate)
