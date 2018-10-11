@@ -7,6 +7,9 @@
 
 * The Quadcopter_Project-Verbose.ipynb file has extra logging and DEPRECIATED code.
 
+### Project Rubric
+* [https://review.udacity.com/#!/rubrics/1189/view](https://review.udacity.com/#!/rubrics/1189/view)
+
 -------
 
 # Deep RL Quadcopter Controller
