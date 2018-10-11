@@ -1,4 +1,5 @@
 # Content: Reinforcement Learning
+Udacity - Machine Learning Engineer Nanodegree | Nathaniel Watkins
 ## Project: RL Quadcopter
 
 ### Final Report
