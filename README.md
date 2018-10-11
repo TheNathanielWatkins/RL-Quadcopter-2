@@ -1,5 +1,11 @@
-# For the cleanest view, open Report.html or Quadcopter_Project.ipynb
-## The Quadcopter_Project-Verbose.ipynb file has extra logging and DEPRECIATED code.
+# Content: Reinforcement Learning
+## Project: RL Quadcopter
+
+### Final Report
+* To see my work and results, open: 
+[report.html](http://htmlpreview.github.com/?https://github.com/TheNathanielWatkins/Reinforcement-Learning-Quadcopter/blob/master/Report.html)
+
+* The Quadcopter_Project-Verbose.ipynb file has extra logging and DEPRECIATED code.
 
 -------
 
